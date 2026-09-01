@@ -190,6 +190,12 @@ function hideAuthScreen(){
   const bottomNav = document.querySelector(".bottom-nav");
   if(bottomNav){
     bottomNav.classList.remove("hidden");
+    bottomNav.style.display = "grid";
+  }
+
+  const app = document.querySelector(".app");
+  if(app){
+    app.style.paddingBottom = "calc(var(--nav-height) + 25px)";
   }
 
   const content = document.querySelector(".content");
@@ -213,6 +219,12 @@ function showAuthScreen(){
   const bottomNav = document.querySelector(".bottom-nav");
   if(bottomNav){
     bottomNav.classList.add("hidden");
+    bottomNav.style.display = "none";
+  }
+
+  const app = document.querySelector(".app");
+  if(app){
+    app.style.paddingBottom = "0";
   }
 
   document.querySelectorAll(".view").forEach(view => {
@@ -2362,6 +2374,14 @@ function toast(message){
    INITIALIZATION
    ========================================================= */
 
+function hideSplashScreen(){
+  const splashScreen = document.getElementById("splashScreen");
+
+  if(splashScreen){
+    splashScreen.classList.add("hidden");
+  }
+}
+
 function initialize(){
 
   createManifest();
@@ -2423,6 +2443,8 @@ function initialize(){
   */
 
   registerServiceWorker();
+
+  setTimeout(hideSplashScreen, 1800);
 }
 
 initialize();
