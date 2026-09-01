@@ -181,6 +181,21 @@ function hideAuthScreen(){
     authScreen.classList.remove("active");
     authScreen.classList.add("hidden");
   }
+
+  const header = document.querySelector(".header");
+  if(header){
+    header.classList.remove("hidden");
+  }
+
+  const bottomNav = document.querySelector(".bottom-nav");
+  if(bottomNav){
+    bottomNav.classList.remove("hidden");
+  }
+
+  const content = document.querySelector(".content");
+  if(content){
+    content.style.display = "";
+  }
 }
 
 function showAuthScreen(){
@@ -188,6 +203,27 @@ function showAuthScreen(){
   if(authScreen){
     authScreen.classList.remove("hidden");
     authScreen.classList.add("active");
+  }
+
+  const header = document.querySelector(".header");
+  if(header){
+    header.classList.add("hidden");
+  }
+
+  const bottomNav = document.querySelector(".bottom-nav");
+  if(bottomNav){
+    bottomNav.classList.add("hidden");
+  }
+
+  document.querySelectorAll(".view").forEach(view => {
+    if(view.id !== "auth"){
+      view.classList.remove("active");
+    }
+  });
+
+  const content = document.querySelector(".content");
+  if(content){
+    content.style.display = "none";
   }
 }
 
@@ -217,6 +253,81 @@ function syncAuthScreenForRole(){
   title.textContent = "Welcome back, Alex";
   subtitle.textContent = "Secure access to your premium wallet, exclusive rewards, and member benefits.";
   submitBtn.textContent = "Access wallet";
+}
+
+function updateLogoutMessage(){
+  const title = document.getElementById("logoutTitle");
+  const message = document.getElementById("logoutMessage");
+
+  if(!title || !message){
+    return;
+  }
+
+  if(currentRole === "merchant"){
+    title.textContent = "Leave merchant hub?";
+    message.textContent = "Your storefront access will end and you will return to the secure merchant sign-in screen.";
+    return;
+  }
+
+  if(currentRole === "admin"){
+    title.textContent = "Exit admin console?";
+    message.textContent = "Your admin session will end and you will return to the secure platform sign-in screen.";
+    return;
+  }
+
+  title.textContent = "Sign out";
+  message.textContent = "You will be returned to the secure Aurelia sign-in screen.";
+}
+
+function logoutCurrentUser(){
+  updateLogoutMessage();
+  const modal = document.getElementById("logoutModal");
+  if(modal){
+    modal.classList.add("show");
+    modal.setAttribute("aria-hidden", "false");
+  }
+}
+
+function confirmLogout(){
+  customerAuthenticated = false;
+  merchantAuthenticated = false;
+  adminAuthenticated = false;
+
+  localStorage.removeItem("aurelia_customer_logged_in");
+  localStorage.removeItem("aurelia_merchant_logged_in");
+  localStorage.removeItem("aurelia_admin_logged_in");
+  localStorage.removeItem("aurelia_customer_email");
+  localStorage.removeItem("aurelia_merchant_email");
+  localStorage.removeItem("aurelia_admin_email");
+
+  document.querySelectorAll(".customer-nav,.merchant-nav,.admin-nav")
+    .forEach(nav=>nav.classList.add("hidden"));
+
+  document.querySelectorAll(".customer-only")
+    .forEach(element=>element.classList.add("hidden"));
+
+  if(document.getElementById("authForm")){
+    document.getElementById("authForm").reset();
+  }
+
+  const modal = document.getElementById("logoutModal");
+  if(modal){
+    modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  syncAuthScreenForRole();
+  showAuthScreen();
+  analytics.trackEvent("logout", { role:currentRole });
+  toast("Signed out successfully");
+}
+
+function cancelLogout(){
+  const modal = document.getElementById("logoutModal");
+  if(modal){
+    modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+  }
 }
 
 function continueAsGuest(){
@@ -303,7 +414,10 @@ function switchRole(role){
     }
     hideAuthScreen();
     document.querySelectorAll(".customer-nav")
-      .forEach(nav=>nav.classList.remove("hidden"));
+      .forEach(nav=>{
+        nav.classList.remove("hidden");
+        nav.style.display = "flex";
+      });
     showView("home");
     setMode("customer");
     return;
@@ -317,7 +431,10 @@ function switchRole(role){
     }
     hideAuthScreen();
     document.querySelectorAll(".merchant-nav")
-      .forEach(nav=>nav.classList.remove("hidden"));
+      .forEach(nav=>{
+        nav.classList.remove("hidden");
+        nav.style.display = "flex";
+      });
     showView("home");
     setMode("business");
     return;
@@ -331,7 +448,10 @@ function switchRole(role){
 
   hideAuthScreen();
   document.querySelectorAll(".admin-nav")
-    .forEach(nav=>nav.classList.remove("hidden"));
+    .forEach(nav=>{
+      nav.classList.remove("hidden");
+      nav.style.display = "flex";
+    });
   showView("admin");
   renderCharts();
 }
@@ -2256,6 +2376,16 @@ function initialize(){
   const authForm = document.getElementById("authForm");
   if(authForm){
     authForm.addEventListener("submit", handleRoleLogin);
+  }
+
+  const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
+  if(confirmLogoutBtn){
+    confirmLogoutBtn.addEventListener("click", confirmLogout);
+  }
+
+  const cancelLogoutBtn = document.getElementById("cancelLogoutBtn");
+  if(cancelLogoutBtn){
+    cancelLogoutBtn.addEventListener("click", cancelLogout);
   }
 
   syncAuthScreenForRole();

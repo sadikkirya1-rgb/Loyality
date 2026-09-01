@@ -37,8 +37,8 @@
     </div>
 
     <div class="header-meta" aria-live="polite">
-      <div id="roleBadge" class="role-badge">CUSTOMER</div>
-      <div id="roleSubtitle" class="header-status">Premium wallet</div>
+      <div id="roleBadge" class="role-badge" hidden>CUSTOMER</div>
+      <div id="roleSubtitle" class="header-status" hidden>Premium wallet</div>
     </div>
 
     <div class="header-actions">
@@ -55,6 +55,14 @@
         aria-label="Open profile"
         onclick="showView('profile')">
         AM
+      </button>
+
+      <button
+        class="logout-btn"
+        type="button"
+        onclick="logoutCurrentUser()"
+        aria-label="Logout">
+        ⇠
       </button>
     </div>
 
@@ -975,6 +983,17 @@
     <p class="subtitle center" id="confirmMessage">Are you sure?</p>
     <button class="btn gold-btn full" id="confirmActionBtn" type="button">Continue</button>
     <button class="btn light-btn full" style="margin-top:9px" id="cancelActionBtn" type="button">Cancel</button>
+  </div>
+</div>
+
+<div class="modal" id="logoutModal" aria-hidden="true">
+  <div class="sheet compact-sheet logout-sheet">
+    <div class="handle"></div>
+    <div class="logout-icon">⇠</div>
+    <h2 id="logoutTitle">Sign out</h2>
+    <p class="subtitle center" id="logoutMessage">You will be returned to the secure Aurelia sign-in screen.</p>
+    <button class="btn gold-btn full" id="confirmLogoutBtn" type="button">Sign out</button>
+    <button class="btn light-btn full" style="margin-top:9px" id="cancelLogoutBtn" type="button">Stay signed in</button>
   </div>
 </div>
 
