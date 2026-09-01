@@ -38,7 +38,7 @@
 
     <div class="header-actions">
       <button
-        class="icon-button"
+        class="icon-button customer-only"
         aria-label="Notifications"
         onclick="showNotifications()">
         ♧
@@ -46,7 +46,7 @@
       </button>
 
       <button
-        class="avatar"
+        class="avatar customer-only"
         aria-label="Open profile"
         onclick="showView('profile')">
         AM
@@ -61,15 +61,6 @@
 <!-- HOME -->
 
 <section id="home" class="view active">
-
-  <div class="mode">
-    <button id="customerMode" class="active" onclick="setMode('customer')">
-      CUSTOMER
-    </button>
-    <button id="businessMode" onclick="setMode('business')">
-      BUSINESS
-    </button>
-  </div>
 
   <div id="customerHome">
 
@@ -333,7 +324,7 @@
     <div class="title-row">
 
       <div>
-        <h1 class="title">Business Hub</h1>
+        <h1 class="title">Merchant Hub</h1>
         <p class="subtitle">Royal Coffee House</p>
       </div>
 
@@ -842,33 +833,71 @@
 
 </main>
 
+<div class="loading-overlay hidden" id="loadingOverlay" role="status" aria-live="polite" aria-busy="true">
+  <div class="loading-card">
+    <div class="loading-spinner"></div>
+    <div id="loadingText">Loading your account</div>
+  </div>
+</div>
+
+<div class="modal" id="errorModal" aria-hidden="true">
+  <div class="sheet compact-sheet">
+    <div class="handle"></div>
+    <div class="error-icon">!</div>
+    <h2 id="errorTitle">Something went wrong</h2>
+    <p class="subtitle center" id="errorMessage">Please try again.</p>
+    <button class="btn gold-btn full" id="errorRetryBtn" type="button">Retry</button>
+    <button class="btn light-btn full" style="margin-top:9px" id="errorCloseBtn" type="button">Close</button>
+  </div>
+</div>
+
+<div class="modal" id="actionConfirmModal" aria-hidden="true">
+  <div class="sheet compact-sheet">
+    <div class="handle"></div>
+    <h2 id="confirmTitle">Confirm action</h2>
+    <p class="subtitle center" id="confirmMessage">Are you sure?</p>
+    <button class="btn gold-btn full" id="confirmActionBtn" type="button">Continue</button>
+    <button class="btn light-btn full" style="margin-top:9px" id="cancelActionBtn" type="button">Cancel</button>
+  </div>
+</div>
+
 <!-- NAV -->
 
 <nav class="bottom-nav">
 
-  <button class="nav active" data-view="home" onclick="showView('home')">
+  <button class="nav active customer-nav" data-view="home" onclick="showView('home')">
     <span class="nav-icon">⌂</span>
     <span>Home</span>
   </button>
 
-  <button class="nav" data-view="rewards" onclick="showView('rewards')">
+  <button class="nav customer-nav" data-view="rewards" onclick="showView('rewards')">
     <span class="nav-icon">♛</span>
     <span>Rewards</span>
   </button>
 
-  <button class="scan-nav" onclick="openScanner()" aria-label="Scan">
+  <button class="scan-nav customer-nav" onclick="openScanner()" aria-label="Scan">
     <span class="scan-symbol">⌁</span>
     <span class="scan-label">SCAN</span>
   </button>
 
-  <button class="nav" data-view="activity" onclick="showView('activity')">
+  <button class="nav customer-nav" data-view="activity" onclick="showView('activity')">
     <span class="nav-icon">↗</span>
     <span>Activity</span>
   </button>
 
-  <button class="nav" data-view="profile" onclick="showView('profile')">
+  <button class="nav customer-nav" data-view="profile" onclick="showView('profile')">
     <span class="nav-icon">◉</span>
     <span>Profile</span>
+  </button>
+
+  <button class="nav merchant-nav hidden" data-view="home" onclick="switchRole('merchant')">
+    <span class="nav-icon">▣</span>
+    <span>Merchant</span>
+  </button>
+
+  <button class="nav admin-nav hidden" data-view="admin" onclick="switchRole('admin')">
+    <span class="nav-icon">◆</span>
+    <span>Admin</span>
   </button>
 
 </nav>
@@ -938,28 +967,30 @@
       </div>
     </div>
 
-    <div class="transaction">
-      <div class="tx-icon">✦</div>
-      <div class="tx-info">
-        <b>You earned 100 points</b>
-        <small>Royal Coffee House • Just now</small>
+    <div class="notification-list">
+      <div class="transaction">
+        <div class="tx-icon">✦</div>
+        <div class="tx-info">
+          <b>You earned 100 points</b>
+          <small>Royal Coffee House • Just now</small>
+        </div>
+        <span class="positive">NEW</span>
       </div>
-      <span class="positive">NEW</span>
-    </div>
 
-    <div class="transaction">
-      <div class="tx-icon">♛</div>
-      <div class="tx-info">
-        <b>Reward unlocked</b>
-        <small>You can redeem Premium Coffee</small>
+      <div class="transaction">
+        <div class="tx-icon">♛</div>
+        <div class="tx-info">
+          <b>Reward unlocked</b>
+          <small>You can redeem Premium Coffee</small>
+        </div>
       </div>
-    </div>
 
-    <div class="transaction">
-      <div class="tx-icon">🔥</div>
-      <div class="tx-info">
-        <b>Challenge almost complete</b>
-        <small>Visit one more partner</small>
+      <div class="transaction">
+        <div class="tx-icon">🔥</div>
+        <div class="tx-info">
+          <b>Challenge almost complete</b>
+          <small>Visit one more partner</small>
+        </div>
       </div>
     </div>
 
@@ -997,7 +1028,7 @@
 
 <!-- TOAST -->
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- QR SCANNING LIBRARY -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>

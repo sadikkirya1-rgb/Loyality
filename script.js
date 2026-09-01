@@ -22,6 +22,46 @@ let transactions =
 let referrals =
   Number(localStorage.getItem(STORAGE.referrals) || 0);
 
+const analytics = {
+  queue:[],
+  trackEvent(eventName, properties = {}){
+    const event = {
+      name:eventName,
+      properties,
+      time:new Date().toISOString()
+    };
+
+    this.queue.push(event);
+
+    try{
+      localStorage.setItem(
+        "aurelia_analytics_events",
+        JSON.stringify(this.queue.slice(-200))
+      );
+    }catch(error){
+      console.debug("Analytics storage unavailable", error);
+    }
+
+    console.debug("[analytics]", event);
+  },
+  trackFunnel(step, properties = {}){
+    this.trackEvent("funnel", { step, ...properties });
+  },
+  trackPerformance(label, value){
+    this.trackEvent("performance", { label, value });
+  },
+  trackRetention(){
+    this.trackEvent("retention", {
+      role:currentRole,
+      visits,
+      points
+    });
+  }
+};
+
+let pendingRetry = null;
+let pendingConfirmation = null;
+
 let stream = null;
 let scanning = false;
 let scanAnimation = null;
@@ -29,6 +69,11 @@ let pendingScan = null;
 let installPrompt = null;
 let lastScannedValue = "";
 let lastScanTime = 0;
+const requestedRole = new URLSearchParams(location.search).get("role");
+const validRoles = ["customer","merchant","admin"];
+let currentRole = validRoles.includes(requestedRole)
+  ? requestedRole
+  : localStorage.getItem("aurelia_role") || "customer";
 
 
 /* =========================================================
@@ -81,6 +126,45 @@ function showView(view){
   }
 }
 
+function switchRole(role){
+
+  currentRole = role;
+  localStorage.setItem("aurelia_role",role);
+
+  document.querySelectorAll(".app-switch-btn")
+    .forEach(button=>{
+      const isActive = button.dataset.role === role;
+      button.classList.toggle("active",isActive);
+      button.setAttribute("aria-pressed",String(isActive));
+    });
+
+  document.querySelectorAll(".customer-nav,.merchant-nav,.admin-nav")
+    .forEach(nav=>nav.classList.add("hidden"));
+  document.querySelectorAll(".customer-only")
+    .forEach(element=>element.classList.toggle("hidden",role !== "customer"));
+
+  if(role === "customer"){
+    document.querySelectorAll(".customer-nav")
+      .forEach(nav=>nav.classList.remove("hidden"));
+    showView("home");
+    setMode("customer");
+    return;
+  }
+
+  if(role === "merchant"){
+    document.querySelectorAll(".merchant-nav")
+      .forEach(nav=>nav.classList.remove("hidden"));
+    showView("home");
+    setMode("business");
+    return;
+  }
+
+  document.querySelectorAll(".admin-nav")
+    .forEach(nav=>nav.classList.remove("hidden"));
+  showView("admin");
+  renderCharts();
+}
+
 function openScanner(){
   showView("scan");
 
@@ -101,21 +185,6 @@ function openScanner(){
    ========================================================= */
 
 function setMode(mode){
-
-  document
-    .getElementById("customerMode")
-    .classList.toggle(
-      "active",
-      mode === "customer"
-    );
-
-  document
-    .getElementById("businessMode")
-    .classList.toggle(
-      "active",
-      mode === "business"
-    );
-
   document
     .getElementById("customerHome")
     .classList.toggle(
@@ -525,7 +594,15 @@ function renderRewards(){
 
     }).join("");
 
-  setHTML("rewardList",html);
+  setHTML(
+    "rewardList",
+    html || `
+      <div class="empty">
+        No rewards available right now.<br>
+        Check back soon for new partner offers.
+      </div>
+    `
+  );
 }
 
 function redeem(cost,name){
@@ -541,24 +618,41 @@ function redeem(cost,name){
     return;
   }
 
-  points -= cost;
+  const confirmAction = ()=>{
+    showLoading("Redeeming reward");
 
-  addTransaction(
-    name,
-    cost,
-    "redeem"
-  );
+    setTimeout(()=>{
+      points -= cost;
 
-  updatePoints();
-  renderRewards();
+      addTransaction(
+        name,
+        cost,
+        "redeem"
+      );
 
-  notify(
-    "Reward redeemed",
-    name+" is ready to use."
-  );
+      updatePoints();
+      renderRewards();
 
-  toast(
-    "Reward redeemed successfully"
+      notify(
+        "Reward redeemed",
+        name+" is ready to use."
+      );
+
+      analytics.trackEvent("reward_redeemed", { name, cost });
+      analytics.trackFunnel("reward_redeemed", { name });
+      hideLoading();
+      toast(
+        "Reward redeemed successfully"
+      );
+      closeActionConfirm();
+    }, 400);
+  };
+
+  showConfirmation(
+    "Redeem reward",
+    "Redeem "+name+" for "+cost.toLocaleString()+" points?",
+    "Redeem now",
+    confirmAction
   );
 }
 
@@ -935,6 +1029,7 @@ function handleQRCode(value){
     raw:value
   };
 
+  analytics.trackEvent("qr_scan_validated", { business, reward });
   stopScanner();
 
   setText(
@@ -986,36 +1081,43 @@ function confirmScan(){
     return;
   }
 
-  points +=
-    pendingScan.points;
+  showLoading("Applying points");
 
-  visits++;
+  setTimeout(()=>{
+    points +=
+      pendingScan.points;
 
-  addTransaction(
-    pendingScan.business,
-    pendingScan.points,
-    "earn"
-  );
+    visits++;
 
-  updatePoints();
+    addTransaction(
+      pendingScan.business,
+      pendingScan.points,
+      "earn"
+    );
 
-  notify(
-    "Points earned",
-    "+"+
-    pendingScan.points+
-    " points from "+
-    pendingScan.business
-  );
+    updatePoints();
 
-  closeModal();
+    notify(
+      "Points earned",
+      "+"+
+      pendingScan.points+
+      " points from "+
+      pendingScan.business
+    );
 
-  toast(
-    "+"+
-    pendingScan.points+
-    " points added"
-  );
+    analytics.trackEvent("scan_confirmed", { business:pendingScan.business, points:pendingScan.points });
+    analytics.trackFunnel("scan_confirmed", { business:pendingScan.business });
+    hideLoading();
+    closeModal();
 
-  pendingScan = null;
+    toast(
+      "+"+
+      pendingScan.points+
+      " points added"
+    );
+
+    pendingScan = null;
+  }, 450);
 }
 
 
@@ -1154,20 +1256,21 @@ function getReferralLink(){
 
 async function copyReferral(){
 
-  const text =
-    getReferralLink();
+  const text = getReferralLink();
 
   try{
-
-    await navigator.clipboard.writeText(
-      text
-    );
-
+    await navigator.clipboard.writeText(text);
+    analytics.trackEvent("referral_copied", { text });
     toast("Referral link copied");
-
-  }catch{
-
-    toast("Copy unavailable");
+    return true;
+  }catch(error){
+    handleRecoverableError(
+      "Unable to copy referral link.",
+      "Retry copy",
+      ()=>copyReferral()
+    );
+    console.debug(error);
+    return false;
   }
 }
 
@@ -1182,17 +1285,20 @@ async function shareReferral(){
   if(navigator.share){
 
     try{
-
       await navigator.share({
         title:"Join Aurelia",
         text,
         url
       });
-
+      analytics.trackEvent("referral_shared", { url });
     }catch(error){
-
       if(error.name !== "AbortError"){
         console.debug(error);
+        handleRecoverableError(
+          "Unable to share right now.",
+          "Retry share",
+          ()=>shareReferral()
+        );
       }
     }
 
@@ -1290,8 +1396,38 @@ function notify(title,message){
   }
 }
 
-function showNotifications(){
+function renderNotifications(){
+  const modal = document.getElementById("notificationModal");
+  if(!modal){
+    return;
+  }
 
+  const existing = JSON.parse(localStorage.getItem(STORAGE.notifications) || "[]");
+
+  if(!existing.length){
+    modal.querySelector(".notification-list").innerHTML = `
+      <div class="empty">
+        No notifications yet.<br>
+        Your rewards and activity updates will appear here.
+      </div>
+    `;
+    return;
+  }
+
+  modal.querySelector(".notification-list").innerHTML = existing.map(item=>`
+    <div class="transaction">
+      <div class="tx-icon">${item.title.includes("Reward") ? "♛" : item.title.includes("Challenge") ? "🔥" : "✦"}</div>
+      <div class="tx-info">
+        <b>${escapeHTML(item.title)}</b>
+        <small>${escapeHTML(item.message)} • ${new Date(item.date).toLocaleString([], { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })}</small>
+      </div>
+      <span class="positive">NEW</span>
+    </div>
+  `).join("");
+}
+
+function showNotifications(){
+  renderNotifications();
   document
     .getElementById(
       "notificationModal"
@@ -1350,20 +1486,27 @@ function addBusiness(){
     return;
   }
 
-  document
-    .getElementById("newBusiness")
-    .value = "";
+  showLoading("Adding business");
 
-  notify(
-    "Business added",
-    name+
-    " has been added successfully."
-  );
+  setTimeout(()=>{
+    document
+      .getElementById("newBusiness")
+      .value = "";
 
-  toast(
-    name+
-    " added successfully"
-  );
+    notify(
+      "Business added",
+      name+
+      " has been added successfully."
+    );
+
+    analytics.trackEvent("business_added", { name, pointsValue });
+    analytics.trackFunnel("business_added", { name });
+    hideLoading();
+    toast(
+      name+
+      " added successfully"
+    );
+  }, 500);
 }
 
 function toggleButton(button){
@@ -1484,6 +1627,91 @@ function renderCharts(){
 /* =========================================================
    PWA
    ========================================================= */
+
+function showLoading(text = "Loading your account"){
+  const modal = document.getElementById("loadingOverlay");
+  const label = document.getElementById("loadingText");
+  if(!modal || !label){
+    return;
+  }
+
+  label.textContent = text;
+  modal.classList.remove("hidden");
+}
+
+function hideLoading(){
+  const modal = document.getElementById("loadingOverlay");
+  if(modal){
+    modal.classList.add("hidden");
+  }
+}
+
+function handleRecoverableError(message, retryLabel, retryFn){
+  const modal = document.getElementById("errorModal");
+  const title = document.getElementById("errorTitle");
+  const body = document.getElementById("errorMessage");
+  const retryBtn = document.getElementById("errorRetryBtn");
+
+  if(!modal || !title || !body || !retryBtn){
+    toast(message);
+    return;
+  }
+
+  title.textContent = "Something went wrong";
+  body.textContent = message;
+  retryBtn.textContent = retryLabel;
+  retryBtn.onclick = ()=>{
+    hideErrorModal();
+    if(retryFn){
+      retryFn();
+    }
+  };
+
+  modal.classList.add("show");
+  modal.setAttribute("aria-hidden", "false");
+  pendingRetry = retryFn;
+}
+
+function hideErrorModal(){
+  const modal = document.getElementById("errorModal");
+  if(modal){
+    modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+  }
+}
+
+function showConfirmation(title, message, confirmLabel, onConfirm){
+  const modal = document.getElementById("actionConfirmModal");
+  const titleEl = document.getElementById("confirmTitle");
+  const messageEl = document.getElementById("confirmMessage");
+  const confirmBtn = document.getElementById("confirmActionBtn");
+
+  if(!modal || !titleEl || !messageEl || !confirmBtn){
+    return;
+  }
+
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  confirmBtn.textContent = confirmLabel;
+  confirmBtn.onclick = ()=>{
+    if(onConfirm){
+      onConfirm();
+    }
+  };
+
+  pendingConfirmation = onConfirm;
+  modal.classList.add("show");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeActionConfirm(){
+  const modal = document.getElementById("actionConfirmModal");
+  if(modal){
+    modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+  }
+  pendingConfirmation = null;
+}
 
 function createManifest(){
 
@@ -1667,6 +1895,37 @@ window.addEventListener(
   updateOnlineState
 );
 
+window.addEventListener(
+  "error",
+  event=>{
+    console.error("Window error:", event.error || event.message);
+    reportError(event.error || new Error(event.message || "Unexpected error"), "window_error");
+  }
+);
+
+window.addEventListener(
+  "unhandledrejection",
+  event=>{
+    console.error("Unhandled rejection:", event.reason);
+    reportError(event.reason || new Error("Unhandled promise rejection"), "promise_rejection");
+  }
+);
+
+function reportError(error, context = "unknown"){
+  const message = error && error.message ? error.message : "An unexpected problem occurred.";
+  analytics.trackEvent("app_error", { context, message });
+
+  if(document.getElementById("errorModal") && !document.getElementById("errorModal").classList.contains("show")){
+    handleRecoverableError(message, "Retry", ()=>{
+      if(pendingRetry){
+        pendingRetry();
+      } else {
+        toast("Retry from the previous action.");
+      }
+    });
+  }
+}
+
 
 /* =========================================================
    MODALS
@@ -1815,6 +2074,7 @@ function initialize(){
   renderCharts();
   generateQR();
   updateOnlineState();
+  switchRole(currentRole);
 
   const month =
     new Date().toLocaleDateString(
