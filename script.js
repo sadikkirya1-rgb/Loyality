@@ -61,6 +61,9 @@ const analytics = {
 
 let pendingRetry = null;
 let pendingConfirmation = null;
+let customerAuthenticated = localStorage.getItem("aurelia_customer_logged_in") === "1";
+let merchantAuthenticated = localStorage.getItem("aurelia_merchant_logged_in") === "1";
+let adminAuthenticated = localStorage.getItem("aurelia_admin_logged_in") === "1";
 
 let stream = null;
 let scanning = false;
@@ -80,7 +83,53 @@ let currentRole = validRoles.includes(requestedRole)
    NAVIGATION
    ========================================================= */
 
+function updateRoleContext(){
+  const badge = document.getElementById("roleBadge");
+  const subtitle = document.getElementById("roleSubtitle");
+
+  if(!badge || !subtitle){
+    return;
+  }
+
+  if(currentRole === "merchant"){
+    badge.textContent = "MERCHANT";
+    subtitle.textContent = "Sales overview";
+    return;
+  }
+
+  if(currentRole === "admin"){
+    badge.textContent = "ADMIN";
+    subtitle.textContent = "Platform control";
+    return;
+  }
+
+  badge.textContent = "CUSTOMER";
+  subtitle.textContent = "Premium wallet";
+}
+
+function syncRoleAccess(view){
+  const customerViews = ["home","rewards","activity","profile","scan"];
+  const merchantViews = ["home"];
+  const adminViews = ["admin"];
+
+  if(currentRole === "merchant" && customerViews.includes(view)){
+    return "home";
+  }
+
+  if(currentRole === "admin" && !adminViews.includes(view)){
+    return "admin";
+  }
+
+  if(currentRole === "customer" && merchantViews.includes(view)){
+    return "home";
+  }
+
+  return view;
+}
+
 function showView(view){
+
+  const allowedView = syncRoleAccess(view);
 
   document
     .querySelectorAll(".view")
@@ -89,7 +138,7 @@ function showView(view){
     });
 
   const target =
-    document.getElementById(view);
+    document.getElementById(allowedView);
 
   if(target){
     target.classList.add("active");
@@ -126,17 +175,120 @@ function showView(view){
   }
 }
 
+function hideAuthScreen(){
+  const authScreen = document.getElementById("auth");
+  if(authScreen){
+    authScreen.classList.remove("active");
+    authScreen.classList.add("hidden");
+  }
+}
+
+function showAuthScreen(){
+  const authScreen = document.getElementById("auth");
+  if(authScreen){
+    authScreen.classList.remove("hidden");
+    authScreen.classList.add("active");
+  }
+}
+
+function syncAuthScreenForRole(){
+  const title = document.getElementById("authTitle");
+  const subtitle = document.getElementById("authSubtitle");
+  const submitBtn = document.getElementById("authSubmitBtn");
+
+  if(!title || !subtitle || !submitBtn){
+    return;
+  }
+
+  if(currentRole === "merchant"){
+    title.textContent = "Welcome back, merchant";
+    subtitle.textContent = "Manage your storefront, member scans, and premium reward activity securely.";
+    submitBtn.textContent = "Open merchant hub";
+    return;
+  }
+
+  if(currentRole === "admin"){
+    title.textContent = "Admin access";
+    subtitle.textContent = "Monitor performance, partner health, approvals, and loyalty operations in real time.";
+    submitBtn.textContent = "Enter admin console";
+    return;
+  }
+
+  title.textContent = "Welcome back, Alex";
+  subtitle.textContent = "Secure access to your premium wallet, exclusive rewards, and member benefits.";
+  submitBtn.textContent = "Access wallet";
+}
+
+function continueAsGuest(){
+  if(currentRole === "customer"){
+    customerAuthenticated = true;
+    localStorage.setItem("aurelia_customer_logged_in", "1");
+  }
+
+  if(currentRole === "merchant"){
+    merchantAuthenticated = true;
+    localStorage.setItem("aurelia_merchant_logged_in", "1");
+  }
+
+  if(currentRole === "admin"){
+    adminAuthenticated = true;
+    localStorage.setItem("aurelia_admin_logged_in", "1");
+  }
+
+  hideAuthScreen();
+  analytics.trackEvent("guest_access", { role:currentRole });
+  switchRole(currentRole);
+}
+
+function handleRoleLogin(event){
+  event.preventDefault();
+
+  const emailInput = document.getElementById("authEmail");
+  const passwordInput = document.getElementById("authPassword");
+  const email = emailInput ? emailInput.value.trim() : "";
+  const password = passwordInput ? passwordInput.value.trim() : "";
+
+  if(!email || !email.includes("@") || !password){
+    toast("Enter a valid email and password");
+    return;
+  }
+
+  showLoading("Signing you in");
+
+  setTimeout(()=>{
+    if(currentRole === "customer"){
+      customerAuthenticated = true;
+      localStorage.setItem("aurelia_customer_logged_in", "1");
+      localStorage.setItem("aurelia_customer_email", email);
+      analytics.trackEvent("customer_login", { email });
+    }
+
+    if(currentRole === "merchant"){
+      merchantAuthenticated = true;
+      localStorage.setItem("aurelia_merchant_logged_in", "1");
+      localStorage.setItem("aurelia_merchant_email", email);
+      analytics.trackEvent("merchant_login", { email });
+    }
+
+    if(currentRole === "admin"){
+      adminAuthenticated = true;
+      localStorage.setItem("aurelia_admin_logged_in", "1");
+      localStorage.setItem("aurelia_admin_email", email);
+      analytics.trackEvent("admin_login", { email });
+    }
+
+    hideLoading();
+    hideAuthScreen();
+    switchRole(currentRole);
+    toast("Welcome back");
+  }, 450);
+}
+
 function switchRole(role){
 
   currentRole = role;
   localStorage.setItem("aurelia_role",role);
-
-  document.querySelectorAll(".app-switch-btn")
-    .forEach(button=>{
-      const isActive = button.dataset.role === role;
-      button.classList.toggle("active",isActive);
-      button.setAttribute("aria-pressed",String(isActive));
-    });
+  updateRoleContext();
 
   document.querySelectorAll(".customer-nav,.merchant-nav,.admin-nav")
     .forEach(nav=>nav.classList.add("hidden"));
@@ -144,6 +296,12 @@ function switchRole(role){
     .forEach(element=>element.classList.toggle("hidden",role !== "customer"));
 
   if(role === "customer"){
+    if(!customerAuthenticated){
+      syncAuthScreenForRole();
+      showAuthScreen();
+      return;
+    }
+    hideAuthScreen();
     document.querySelectorAll(".customer-nav")
       .forEach(nav=>nav.classList.remove("hidden"));
     showView("home");
@@ -152,6 +310,12 @@ function switchRole(role){
   }
 
   if(role === "merchant"){
+    if(!merchantAuthenticated){
+      syncAuthScreenForRole();
+      showAuthScreen();
+      return;
+    }
+    hideAuthScreen();
     document.querySelectorAll(".merchant-nav")
       .forEach(nav=>nav.classList.remove("hidden"));
     showView("home");
@@ -159,6 +323,13 @@ function switchRole(role){
     return;
   }
 
+  if(!adminAuthenticated){
+    syncAuthScreenForRole();
+    showAuthScreen();
+    return;
+  }
+
+  hideAuthScreen();
   document.querySelectorAll(".admin-nav")
     .forEach(nav=>nav.classList.remove("hidden"));
   showView("admin");
@@ -258,6 +429,7 @@ function updatePoints(){
 
   setText("cardPoints",formatted);
   setText("totalPoints",formatted);
+  setText("walletBalance",formatted+" pts");
   setText("rewardBalance",formatted+" pts");
   setText("visitCount",visits);
   setText("tierCurrent",formatted);
@@ -374,45 +546,50 @@ function renderTransactions(){
   let list = transactions;
 
   if(!list.length){
+    setHTML(
+      "recentTransactions",
+      `
+        <div class="empty-state compact-empty">
+          <div class="empty-icon">↗</div>
+          <strong>Your activity is clear</strong>
+          <p>No transactions yet. Points earned and redeemed will appear here as your statement.</p>
+        </div>
+      `
+    );
 
-    list = [
-      {
-        title:"Royal Coffee House",
-        amount:100,
-        type:"earn",
-        date:"Today, 11:24 AM"
-      },
-      {
-        title:"Luxury Market",
-        amount:250,
-        type:"earn",
-        date:"Aug 23, 4:10 PM"
-      },
-      {
-        title:"Premium Coffee",
-        amount:1000,
-        type:"redeem",
-        date:"Aug 21, 10:05 AM"
-      }
-    ];
+    setHTML(
+      "allTransactions",
+      `
+        <div class="empty-state compact-empty">
+          <div class="empty-icon">↗</div>
+          <strong>Your activity is clear</strong>
+          <p>No transactions yet. Points earned and redeemed will appear here as your statement.</p>
+        </div>
+      `
+    );
 
+    calculateTotals();
+    return;
   }
 
   const html =
     list.map(t=>`
 
-      <div class="transaction">
+      <div class="transaction statement-item">
 
         <div class="tx-icon">
           ${t.type === "redeem" ? "♛" : "✦"}
         </div>
 
         <div class="tx-info">
-          <b>${escapeHTML(t.title)}</b>
+          <div class="statement-header">
+            <b>${escapeHTML(t.title)}</b>
+            <span class="statement-badge ${t.type === "redeem" ? "debit" : "credit"}">${t.type === "redeem" ? "Redeem" : "Earn"}</span>
+          </div>
           <small>${escapeHTML(t.date)}</small>
         </div>
 
-        <div class="${
+        <div class="statement-amount ${
           t.type === "redeem"
             ? "negative"
             : "positive"
@@ -597,9 +774,10 @@ function renderRewards(){
   setHTML(
     "rewardList",
     html || `
-      <div class="empty">
-        No rewards available right now.<br>
-        Check back soon for new partner offers.
+      <div class="empty-state">
+        <div class="empty-icon">♛</div>
+        <strong>Your reward vault is empty</strong>
+        <p>New partner offers and premium benefits will appear here once they are unlocked.</p>
       </div>
     `
   );
@@ -2074,6 +2252,25 @@ function initialize(){
   renderCharts();
   generateQR();
   updateOnlineState();
+
+  const authForm = document.getElementById("authForm");
+  if(authForm){
+    authForm.addEventListener("submit", handleRoleLogin);
+  }
+
+  syncAuthScreenForRole();
+  updateRoleContext();
+
+  if(currentRole === "customer" && !customerAuthenticated){
+    showAuthScreen();
+  } else if(currentRole === "merchant" && !merchantAuthenticated){
+    showAuthScreen();
+  } else if(currentRole === "admin" && !adminAuthenticated){
+    showAuthScreen();
+  } else {
+    hideAuthScreen();
+  }
+
   switchRole(currentRole);
 
   const month =
