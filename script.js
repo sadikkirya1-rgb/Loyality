@@ -211,6 +211,32 @@ function showMerchantSection(sectionId, button){
   });
 }
 
+function showAdminSection(sectionId, button){
+  const adminHome = document.getElementById("admin");
+  const section = document.getElementById(sectionId);
+
+  if(!adminHome || !section || currentRole !== "admin"){
+    return;
+  }
+
+  Array.from(adminHome.children)
+    .forEach(child=>child.classList.add("hidden"));
+
+  if(sectionId === "admin"){
+    Array.from(adminHome.children)
+      .forEach(child=>child.classList.remove("hidden"));
+  } else {
+    section.classList.remove("hidden");
+  }
+
+  document
+    .querySelectorAll(".admin-nav")
+    .forEach(nav=>nav.classList.remove("active"));
+  button.classList.add("active");
+
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+
 function hideAuthScreen(){
   const authScreen = document.getElementById("auth");
   if(authScreen){
@@ -505,6 +531,10 @@ function switchRole(role){
       nav.style.display = "flex";
     });
   showView("admin");
+  const adminOverviewNav = document.querySelector(".admin-nav");
+  if(adminOverviewNav){
+    adminOverviewNav.classList.add("active");
+  }
   renderCharts();
 }
 
@@ -2041,6 +2071,38 @@ function toggleButton(button){
     "light-btn",
     enabled
   );
+}
+
+function reviewAdminItem(button, item){
+  button.textContent = "Done";
+  button.classList.remove("gold-btn");
+  button.classList.add("light-btn");
+  button.disabled = true;
+  toast(`${item} marked for review`);
+  analytics.trackEvent("admin_review_started", { item });
+}
+
+function updateAdminSecurity(setting){
+  toast(`${setting} settings opened`);
+  analytics.trackEvent("admin_security_setting_opened", { setting });
+}
+
+function exportAdminAudit(){
+  const audit = [
+    "Crane Points administrator audit export",
+    `Generated: ${new Date().toISOString()}`,
+    "Admin login verified",
+    "Fraud protection enabled",
+    "Partner approval completed"
+  ].join("\\n");
+  const blob = new Blob([audit], { type:"text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "crane-points-admin-audit.txt";
+  link.click();
+  URL.revokeObjectURL(link.href);
+  toast("Audit export downloaded");
+  analytics.trackEvent("admin_audit_exported");
 }
 
 

@@ -1016,7 +1016,7 @@
 
   </div>
 
-  <div class="panel admin-panel">
+  <div class="panel admin-panel" id="adminAnalyticsPanel">
 
     <div class="title-row">
       <div>
@@ -1030,7 +1030,7 @@
 
   </div>
 
-  <div class="panel admin-panel">
+  <div class="panel admin-panel" id="adminOperationsPanel">
     <div class="title-row">
       <div>
         <h3 class="panel-title">Operations snapshot</h3>
@@ -1055,9 +1055,13 @@
         <small>Stable network</small>
       </div>
     </div>
+
+    <div class="divider-label"><span>Needs review</span></div>
+    <div class="review-row"><div><b>Royal Coffee House</b><small>Business verification · submitted 18 min ago</small></div><button class="btn gold-btn" type="button" onclick="reviewAdminItem(this, 'Royal Coffee House')">Review</button></div>
+    <div class="review-row"><div><b>12 duplicate scans</b><small>Flagged across 3 partner accounts</small></div><button class="btn light-btn" type="button" onclick="reviewAdminItem(this, 'Duplicate scan alert')">Inspect</button></div>
   </div>
 
-  <div class="panel admin-panel">
+  <div class="panel admin-panel" id="adminControlsPanel">
 
     <h3 class="panel-title">Platform controls</h3>
 
@@ -1095,7 +1099,7 @@
 
   </div>
 
-  <div class="panel admin-panel">
+  <div class="panel admin-panel" id="adminPartnersPanel">
 
     <h3 class="panel-title">Add business</h3>
 
@@ -1117,6 +1121,23 @@
       Add Business
     </button>
 
+  </div>
+
+  <div class="panel admin-panel" id="adminAuditPanel">
+    <div class="title-row">
+      <div>
+        <h3 class="panel-title">Audit & security</h3>
+        <div class="panel-sub">Review sensitive actions and protect administrator access.</div>
+      </div>
+      <span class="badge">SECURE</span>
+    </div>
+    <div class="admin-line"><div><b>Admin MFA</b><small>Second factor required for privileged actions</small></div><button class="btn gold-btn" type="button" onclick="toggleButton(this)">ON</button></div>
+    <div class="admin-line"><div><b>Session timeout</b><small>Automatic sign-out after 30 minutes</small></div><button class="btn light-btn" type="button" onclick="updateAdminSecurity('Session timeout')">Edit</button></div>
+    <div class="admin-line"><div><b>Audit export</b><small>Download the latest administrator activity</small></div><button class="btn light-btn" type="button" onclick="exportAdminAudit()">Export</button></div>
+    <div class="divider-label"><span>Recent activity</span></div>
+    <div class="audit-row"><span>Admin login verified</span><small>Today, 10:42 AM</small></div>
+    <div class="audit-row"><span>Fraud protection enabled</span><small>Yesterday, 4:18 PM</small></div>
+    <div class="audit-row"><span>Partner approval completed</span><small>Yesterday, 1:06 PM</small></div>
   </div>
 
 </section>
@@ -1221,9 +1242,29 @@
     <span>Settings</span>
   </button>
 
-  <button class="nav admin-nav hidden" data-view="admin" onclick="switchRole('admin')">
-    <span class="nav-icon">◆</span>
-    <span>Admin</span>
+  <button class="nav admin-nav hidden active" type="button" onclick="showAdminSection('admin', this)">
+    <span class="nav-icon">⌂</span>
+    <span>Overview</span>
+  </button>
+
+  <button class="nav admin-nav hidden" type="button" onclick="showAdminSection('adminOperationsPanel', this)">
+    <span class="nav-icon">!</span>
+    <span>Review</span>
+  </button>
+
+  <button class="nav admin-nav hidden" type="button" onclick="showAdminSection('adminPartnersPanel', this)">
+    <span class="nav-icon">▣</span>
+    <span>Partners</span>
+  </button>
+
+  <button class="nav admin-nav hidden" type="button" onclick="showAdminSection('adminControlsPanel', this)">
+    <span class="nav-icon">⚙</span>
+    <span>Controls</span>
+  </button>
+
+  <button class="nav admin-nav hidden" type="button" onclick="showAdminSection('adminAuditPanel', this)">
+    <span class="nav-icon">◉</span>
+    <span>Security</span>
   </button>
 
 </nav>
