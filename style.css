@@ -53,7 +53,7 @@ body{
   display:grid;
   place-items:center;
   background:
-    radial-gradient(circle at center,#f2dfb0 0%,#d8b673 18%,#3f2b1c 55%,#1c1713 100%);
+    radial-gradient(circle at center,var(--gold3) 0%,var(--bg-2) 48%,var(--bg) 100%);
   transition:opacity .7s ease, visibility .7s ease;
 }
 
@@ -79,15 +79,15 @@ body{
 }
 
 .splash-brand{
-  color:#fffaf0;
+  color:var(--text);
   font-size:clamp(1.15rem,3vw,2rem);
   font-weight:900;
   letter-spacing:.35em;
-  text-shadow:0 10px 18px rgba(24,16,10,.2);
+  text-shadow:0 10px 18px rgba(72,55,32,.12);
 }
 
 .splash-subtitle{
-  color:rgba(255,247,234,.82);
+  color:var(--gold-strong);
   font-size:10px;
   font-weight:800;
   letter-spacing:.26em;
@@ -203,9 +203,9 @@ select:focus-visible{
 }
 
 .brand-name{
-  font-size:16px;
+  font-size:14px;
   font-weight:950;
-  letter-spacing:2px;
+  letter-spacing:1.5px;
   color:#201d1a;
 }
 
@@ -867,6 +867,147 @@ select:focus-visible{
   transform:translateY(-1px);
   box-shadow:0 20px 32px rgba(46,34,21,.06);
 }
+
+.form-row{
+  display:flex;
+  align-items:flex-end;
+  gap:9px;
+}
+
+.form-row > *{
+  flex:1;
+  min-width:0;
+}
+
+.form-row > .btn{
+  flex:0 0 auto;
+}
+
+.divider-label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:18px 0 10px;
+  color:#8b7351;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.divider-label:before,
+.divider-label:after{
+  content:"";
+  height:1px;
+  flex:1;
+  background:var(--line);
+}
+
+.merchant-result{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:12px;
+  color:#6f5c42;
+  background:#f8f0e2;
+  font-size:10px;
+  font-weight:800;
+}
+
+.merchant-scanner-video{
+  width:100%;
+  aspect-ratio:4 / 3;
+  object-fit:cover;
+  margin-top:10px;
+  border-radius:14px;
+  background:#201b17;
+}
+
+.merchant-stop-scan{
+  margin-top:8px;
+}
+
+.search-input,
+.merchant-marketing input,
+select{
+  width:100%;
+  min-height:40px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  color:var(--text);
+  background:#fffdf9;
+  font-size:10px;
+}
+
+.segment-tabs{
+  display:flex;
+  gap:6px;
+  margin:12px 0;
+}
+
+.segment-tab{
+  padding:7px 11px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--muted);
+  background:transparent;
+  font-size:9px;
+  font-weight:900;
+}
+
+.segment-tab.active{
+  color:#76521d;
+  background:#f4e4c4;
+  border-color:#dfc28d;
+}
+
+.customer-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:11px 0;
+  border-top:1px solid var(--line);
+}
+
+.customer-row b,
+.customer-row small{
+  display:block;
+}
+
+.customer-row b{
+  font-size:11px;
+}
+
+.customer-row small,
+.customer-row .muted{
+  margin-top:3px;
+  font-size:9px;
+}
+
+.kit-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+
+.kit-item{
+  min-height:76px;
+  padding:10px 7px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  color:var(--text);
+  text-align:left;
+  background:#fffdf9;
+}
+
+.kit-item strong,
+.kit-item small{
+  display:block;
+}
+
+.kit-item strong{font-size:10px;}
+.kit-item small{margin-top:5px;color:var(--muted);font-size:8px;line-height:1.35;}
 
 .panel.compact{
   padding:14px;
@@ -1609,6 +1750,18 @@ select:focus-visible{
   z-index:100;
 }
 
+.bottom-nav:has(.merchant-nav:not(.hidden)){
+  grid-template-columns:repeat(6,1fr);
+}
+
+.bottom-nav:has(.merchant-nav:not(.hidden)) .nav{
+  font-size:7px;
+}
+
+.bottom-nav:has(.merchant-nav:not(.hidden)) .nav-icon{
+  font-size:16px;
+}
+
 @media(min-width:700px){
   .bottom-nav{
     bottom:20px;
@@ -1655,10 +1808,10 @@ select:focus-visible{
 }
 
 .scan-nav{
-  width:68px;
-  height:68px;
+  width:50px;
+  height:50px;
   position:relative;
-  margin:0 auto 20px;
+  margin:0 auto 16px;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -1666,7 +1819,7 @@ select:focus-visible{
   border-radius:50%;
   color:white;
   background:linear-gradient(145deg,#f0d48b,#c4953c 48%,#805b20);
-  border:5px solid var(--bg);
+  border:4px solid var(--bg);
   box-shadow:
     0 13px 27px rgba(116,80,20,.3),
     inset 0 1px rgba(255,255,255,.4);

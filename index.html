@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#f7f4ed">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Aurelia">
+<meta name="apple-mobile-web-app-title" content="Crane Points">
 <meta name="mobile-web-app-capable" content="yes">
 
-<title>AURELIA — Premium Loyalty</title>
+<title>Crane Points — Premium Loyalty</title>
 
 <!-- PWA -->
 <link rel="manifest" id="manifestLink">
@@ -21,14 +21,14 @@
 
 <div class="splash-screen" id="splashScreen" aria-live="polite" aria-busy="true">
   <div class="splash-content">
-    <img src="assets/loading.svg" alt="Aurelia loading" class="splash-icon">
-    <div class="splash-brand">AURELIA</div>
+    <img src="assets/loading.svg" alt="Crane Points loading" class="splash-icon">
+    <div class="splash-brand">CRANE POINTS</div>
     <div class="splash-subtitle">LOYALTY & REWARDS</div>
   </div>
 </div>
 
 <div class="offline" id="offlineBar">
-  You're offline — Aurelia is showing your saved data.
+  You're offline — Crane Points is showing your saved data.
 </div>
 
 <div class="app">
@@ -39,7 +39,7 @@
     <div class="brand">
       <div class="logo">A</div>
       <div>
-        <div class="brand-name">AURELIA</div>
+        <div class="brand-name">CRANE POINTS</div>
         <div class="brand-sub">LOYALTY & REWARDS</div>
       </div>
     </div>
@@ -84,7 +84,7 @@
     <div class="auth-brand">
       <div class="logo auth-logo">A</div>
       <div>
-        <div class="brand-name">AURELIA</div>
+        <div class="brand-name">CRANE POINTS</div>
         <div class="brand-sub">LOYALTY & REWARDS</div>
       </div>
     </div>
@@ -143,7 +143,7 @@
 
       <div class="card-top">
         <div>
-          <div class="card-label">AURELIA MEMBERSHIP</div>
+          <div class="card-label">CRANE POINTS MEMBERSHIP</div>
           <div class="card-title">PREMIUM MEMBER</div>
         </div>
         <div class="tier" id="cardTier">GOLD</div>
@@ -446,7 +446,7 @@
 
     </div>
 
-    <div class="panel" style="margin-top:15px">
+    <div class="panel" id="merchantQrPanel" style="margin-top:15px">
 
       <div class="title-row">
         <div>
@@ -460,7 +460,7 @@
 
       <div class="center">
         <strong>Royal Coffee House</strong>
-        <p class="subtitle">Earn 100 Aurelia points</p>
+        <p class="subtitle">Earn 100 Crane Points</p>
       </div>
 
       <button class="btn gold-btn full" onclick="generateQR()">
@@ -469,7 +469,7 @@
 
     </div>
 
-    <div class="panel">
+    <div class="panel" id="merchantAnalyticsPanel">
 
       <div class="title-row">
         <div>
@@ -482,7 +482,7 @@
 
     </div>
 
-    <div class="panel">
+    <div class="panel" id="merchantControlsPanel">
 
       <div class="admin-line">
         <div>
@@ -510,6 +510,163 @@
 
     </div>
 
+    <div class="panel" id="merchantOperationsPanel">
+
+      <div class="title-row">
+        <div>
+          <h3 class="panel-title">Scanner & validation center</h3>
+          <div class="panel-sub">Validate customer QR codes, vouchers, and loyalty claims.</div>
+        </div>
+        <span class="status-pill good">READY</span>
+      </div>
+
+      <button class="btn gold-btn full" type="button" onclick="startMerchantScanner()">Open camera scanner</button>
+      <video id="merchantScannerVideo" class="merchant-scanner-video hidden" autoplay muted playsinline></video>
+      <button class="btn light-btn full merchant-stop-scan" type="button" onclick="stopMerchantScanner()">Stop scanner</button>
+
+      <div class="divider-label"><span>Manual point adjustment</span></div>
+      <div class="field">
+        <label for="merchantCustomerLookup">Customer mobile or email</label>
+        <input id="merchantCustomerLookup" placeholder="+971 50 123 4567">
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="merchantPointAmount">Points</label>
+          <input id="merchantPointAmount" type="number" value="100" min="1">
+        </div>
+        <button class="btn light-btn" type="button" onclick="adjustMerchantPoints()">Credit points</button>
+      </div>
+
+      <div class="merchant-result" id="merchantScanResult">No customer activity yet</div>
+
+    </div>
+
+    <div class="panel" id="merchantRewardsPanel">
+
+      <div class="title-row">
+        <div>
+          <h3 class="panel-title">Loyalty scheme</h3>
+          <div class="panel-sub">Set earning rules, milestones, and VIP tiers.</div>
+        </div>
+        <span class="badge">ACTIVE</span>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label for="pointsPerCurrency">Points per 1 AED</label>
+          <input id="pointsPerCurrency" type="number" value="1" min="1">
+        </div>
+        <div class="field">
+          <label for="milestoneVisits">Milestone visits</label>
+          <input id="milestoneVisits" type="number" value="9" min="1">
+        </div>
+      </div>
+      <div class="field">
+        <label for="milestoneReward">Milestone reward</label>
+        <input id="milestoneReward" value="1 free drink">
+      </div>
+      <div class="tier-benefits">
+        <span>Bronze · 1X</span>
+        <span>Silver · 1.5X</span>
+        <span>Gold · 2X</span>
+      </div>
+      <button class="btn gold-btn full" type="button" onclick="saveMerchantScheme()">Save loyalty scheme</button>
+
+      <div class="divider-label"><span>Promotions & flash deals</span></div>
+      <div class="field">
+        <label for="promotionTitle">Promotion title</label>
+        <input id="promotionTitle" placeholder="Happy hour double points">
+      </div>
+      <div class="form-row">
+        <input id="promotionWindow" placeholder="Today, 4:00 - 6:00 PM">
+        <button class="btn light-btn" type="button" onclick="publishMerchantPromotion()">Publish deal</button>
+      </div>
+      <div class="merchant-result" id="promotionStatus">No active flash deal</div>
+
+      <div class="divider-label"><span>Referral settings</span></div>
+      <div class="admin-line">
+        <div><b>Double-sided referrals</b><small>Reward both the inviter and friend</small></div>
+        <button class="btn gold-btn" type="button" onclick="toggleButton(this)">ON</button>
+      </div>
+
+    </div>
+
+    <div class="panel" id="merchantCustomersPanel">
+
+      <div class="title-row">
+        <div>
+          <h3 class="panel-title">Customer database</h3>
+          <div class="panel-sub">Review members and target the right audience.</div>
+        </div>
+        <span class="badge">1,284 MEMBERS</span>
+      </div>
+
+      <input class="search-input" id="merchantCustomerSearch" placeholder="Search name, email, or mobile" oninput="filterMerchantCustomers()">
+      <div class="segment-tabs">
+        <button class="segment-tab active" type="button" onclick="filterMerchantSegment('all', this)">All</button>
+        <button class="segment-tab" type="button" onclick="filterMerchantSegment('vip', this)">VIP</button>
+        <button class="segment-tab" type="button" onclick="filterMerchantSegment('inactive', this)">Inactive</button>
+      </div>
+      <div id="merchantCustomerList">
+        <div class="customer-row" data-segment="vip"><div><b>Alex Morgan</b><small>Gold · 2,450 points</small></div><span class="status-pill good">VIP</span></div>
+        <div class="customer-row" data-segment="all"><div><b>Samira Khan</b><small>Silver · 980 points</small></div><span class="muted">Last visit today</span></div>
+        <div class="customer-row" data-segment="inactive"><div><b>Omar Haddad</b><small>Bronze · 210 points</small></div><span class="muted">Inactive 32 days</span></div>
+      </div>
+
+    </div>
+
+    <div class="panel" id="merchantMarketingPanel">
+
+      <div class="title-row">
+        <div>
+          <h3 class="panel-title">Marketing & communications</h3>
+          <div class="panel-sub">Send targeted updates and promote your loyalty club.</div>
+        </div>
+        <span class="status-pill good">CONNECTED</span>
+      </div>
+
+      <div class="field">
+        <label for="merchantNotificationTitle">Notification title</label>
+        <input id="merchantNotificationTitle" placeholder="Your points are waiting">
+      </div>
+      <div class="field">
+        <label for="merchantNotificationMessage">Message</label>
+        <input id="merchantNotificationMessage" placeholder="Visit today and earn double points.">
+      </div>
+      <div class="form-row">
+        <select id="merchantNotificationAudience">
+          <option>All customers</option>
+          <option>VIP members</option>
+          <option>Inactive customers</option>
+        </select>
+        <button class="btn gold-btn" type="button" onclick="sendMerchantNotification()">Send notification</button>
+      </div>
+
+      <div class="divider-label"><span>Promotion kit</span></div>
+      <div class="kit-grid">
+        <button class="kit-item" type="button" onclick="downloadMerchantAsset('QR poster')"><strong>QR poster</strong><small>Print for your counter</small></button>
+        <button class="kit-item" type="button" onclick="downloadMerchantAsset('Social share link')"><strong>Share link</strong><small>Invite customers online</small></button>
+        <button class="kit-item" type="button" onclick="downloadMerchantAsset('Digital flyer')"><strong>Digital flyer</strong><small>Download campaign art</small></button>
+      </div>
+
+    </div>
+
+    <div class="panel" id="merchantSettingsPanel">
+
+      <div class="title-row">
+        <div>
+          <h3 class="panel-title">Staff & device control</h3>
+          <div class="panel-sub">Protect management screens and keep counter work fast.</div>
+        </div>
+        <span class="badge">SECURE</span>
+      </div>
+      <div class="admin-line"><div><b>Management password</b><small>Required for analytics and settings</small></div><button class="btn light-btn" type="button" onclick="updateMerchantSecurity('Management password')">Update</button></div>
+      <div class="admin-line"><div><b>Counter view PIN</b><small>Quick access for staff devices</small></div><button class="btn light-btn" type="button" onclick="updateMerchantSecurity('Counter PIN')">Change</button></div>
+      <div class="admin-line"><div><b>New device approvals</b><small>Review sign-ins before access</small></div><button class="btn gold-btn" type="button" onclick="toggleButton(this)">ON</button></div>
+      <div class="admin-line"><div><b>Staff activity log</b><small>Last access: Today, 10:42 AM</small></div><button class="btn light-btn" type="button" onclick="toast('Staff activity log opened')">View</button></div>
+
+    </div>
+
   </div>
 
 </section>
@@ -522,7 +679,7 @@
 
     <div>
       <h1 class="title">Scan & Earn</h1>
-      <p class="subtitle">Scan an Aurelia business QR code</p>
+      <p class="subtitle">Scan a Crane Points business QR code</p>
     </div>
 
   </div>
@@ -709,7 +866,7 @@
 
     <div>
       <h1 class="title">Profile</h1>
-      <p class="subtitle">Manage your Aurelia membership</p>
+      <p class="subtitle">Manage your Crane Points membership</p>
     </div>
 
   </div>
@@ -795,7 +952,7 @@
     <div class="admin-line">
       <div>
         <b>Marketing notifications</b>
-        <small>Receive occasional Aurelia updates</small>
+        <small>Receive occasional Crane Points updates</small>
       </div>
       <button class="btn light-btn" onclick="toggleButton(this)">OFF</button>
     </div>
@@ -943,7 +1100,7 @@
     <h3 class="panel-title">Add business</h3>
 
     <div class="panel-sub">
-      Connect a new business to Aurelia.
+      Connect a new business to Crane Points.
     </div>
 
     <div class="field" style="margin-top:14px">
@@ -999,7 +1156,7 @@
     <div class="handle"></div>
     <div class="logout-icon">⇠</div>
     <h2 id="logoutTitle">Sign out</h2>
-    <p class="subtitle center" id="logoutMessage">You will be returned to the secure Aurelia sign-in screen.</p>
+    <p class="subtitle center" id="logoutMessage">You will be returned to the secure Crane Points sign-in screen.</p>
     <button class="btn gold-btn full" id="confirmLogoutBtn" type="button">Sign out</button>
     <button class="btn light-btn full" style="margin-top:9px" id="cancelLogoutBtn" type="button">Stay signed in</button>
   </div>
@@ -1034,9 +1191,34 @@
     <span>Profile</span>
   </button>
 
-  <button class="nav merchant-nav hidden" data-view="home" onclick="switchRole('merchant')">
-    <span class="nav-icon">▣</span>
-    <span>Merchant</span>
+  <button class="nav merchant-nav hidden active" type="button" onclick="showMerchantSection('businessHome', this)">
+    <span class="nav-icon">⌂</span>
+    <span>Dashboard</span>
+  </button>
+
+  <button class="nav merchant-nav hidden" type="button" onclick="showMerchantSection('merchantOperationsPanel', this)">
+    <span class="nav-icon">⌁</span>
+    <span>Operate</span>
+  </button>
+
+  <button class="nav merchant-nav hidden" type="button" onclick="showMerchantSection('merchantRewardsPanel', this)">
+    <span class="nav-icon">♛</span>
+    <span>Rewards</span>
+  </button>
+
+  <button class="nav merchant-nav hidden" type="button" onclick="showMerchantSection('merchantCustomersPanel', this)">
+    <span class="nav-icon">◉</span>
+    <span>Customers</span>
+  </button>
+
+  <button class="nav merchant-nav hidden" type="button" onclick="showMerchantSection('merchantMarketingPanel', this)">
+    <span class="nav-icon">✦</span>
+    <span>Marketing</span>
+  </button>
+
+  <button class="nav merchant-nav hidden" type="button" onclick="showMerchantSection('merchantSettingsPanel', this)">
+    <span class="nav-icon">⚙</span>
+    <span>Settings</span>
   </button>
 
   <button class="nav admin-nav hidden" data-view="admin" onclick="switchRole('admin')">
@@ -1065,7 +1247,7 @@
       <span id="scanPoints">100</span>
     </div>
 
-    <div class="center muted">Aurelia points</div>
+    <div class="center muted">Crane Points</div>
 
     <div class="panel" style="margin-top:17px">
 
@@ -1107,7 +1289,7 @@
     <div class="title-row">
       <div>
         <h2 style="margin:0;font-size:20px">Notifications</h2>
-        <p class="subtitle">Your latest Aurelia updates</p>
+        <p class="subtitle">Your latest Crane Points updates</p>
       </div>
     </div>
 
@@ -1156,8 +1338,8 @@
   <div class="logo" style="width:42px;height:42px;flex:none">A</div>
 
   <div class="install-info">
-    <b>Install Aurelia</b>
-    <small>Add Aurelia to your home screen for a native app experience.</small>
+    <b>Install Crane Points</b>
+    <small>Add Crane Points to your home screen for a native app experience.</small>
   </div>
 
   <button class="btn gold-btn" onclick="installPWA()">Install</button>

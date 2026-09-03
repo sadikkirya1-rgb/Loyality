@@ -1,5 +1,5 @@
 /* =========================================================
-   AURELIA APPLICATION
+  CRANE POINTS APPLICATION
    Frontend / PWA prototype
    ========================================================= */
 
@@ -68,15 +68,22 @@ let adminAuthenticated = localStorage.getItem("aurelia_admin_logged_in") === "1"
 let stream = null;
 let scanning = false;
 let scanAnimation = null;
+let merchantScanStream = null;
+let merchantScanAnimation = null;
+let lastMerchantCode = "";
+let lastMerchantCodeTime = 0;
 let pendingScan = null;
 let installPrompt = null;
 let lastScannedValue = "";
 let lastScanTime = 0;
-const requestedRole = new URLSearchParams(location.search).get("role");
-const validRoles = ["customer","merchant","admin"];
+const requestedRole = new URLSearchParams(window.location.search).get("role");
+const savedRole = localStorage.getItem("aurelia_role");
+const validRoles = ["customer", "merchant", "admin"];
 let currentRole = validRoles.includes(requestedRole)
   ? requestedRole
-  : localStorage.getItem("aurelia_role") || "customer";
+  : validRoles.includes(savedRole)
+    ? savedRole
+    : "customer";
 
 
 /* =========================================================
@@ -173,6 +180,35 @@ function showView(view){
   if(view === "home"){
     updatePoints();
   }
+}
+
+function showMerchantSection(sectionId, button){
+  const section = document.getElementById(sectionId);
+  const merchantHome = document.getElementById("businessHome");
+
+  if(!section || !merchantHome || currentRole !== "merchant"){
+    return;
+  }
+
+  Array.from(merchantHome.children)
+    .forEach(child=>child.classList.add("hidden"));
+
+  if(sectionId === "businessHome"){
+    Array.from(merchantHome.children)
+      .forEach(child=>child.classList.remove("hidden"));
+  } else {
+    section.classList.remove("hidden");
+  }
+
+  document
+    .querySelectorAll(".merchant-nav")
+    .forEach(nav=>nav.classList.remove("active"));
+  button.classList.add("active");
+
+  window.scrollTo({
+    top:0,
+    behavior:"smooth"
+  });
 }
 
 function hideAuthScreen(){
@@ -288,7 +324,7 @@ function updateLogoutMessage(){
   }
 
   title.textContent = "Sign out";
-  message.textContent = "You will be returned to the secure Aurelia sign-in screen.";
+  message.textContent = "You will be returned to the secure Crane Points sign-in screen.";
 }
 
 function logoutCurrentUser(){
@@ -448,6 +484,10 @@ function switchRole(role){
         nav.style.display = "flex";
       });
     showView("home");
+      const merchantDashboardNav = document.querySelector(".merchant-nav");
+      if(merchantDashboardNav){
+        merchantDashboardNav.classList.add("active");
+      }
     setMode("business");
     return;
   }
@@ -503,9 +543,172 @@ function setMode(mode){
     );
 
   if(mode === "business"){
+    Array.from(document.getElementById("businessHome").children)
+      .forEach(child=>child.classList.remove("hidden"));
     generateQR();
     renderCharts();
   }
+}
+
+async function startMerchantScanner(){
+  const result = document.getElementById("merchantScanResult");
+  const video = document.getElementById("merchantScannerVideo");
+
+  if(!video || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    result.textContent = "Camera scanning is not supported by this browser.";
+    return;
+  }
+
+  if(!window.isSecureContext){
+    result.textContent = "Camera access requires HTTPS or localhost.";
+    toast("Use HTTPS or localhost");
+    return;
+  }
+
+  try{
+    stopMerchantScanner();
+    merchantScanStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
+    video.srcObject = merchantScanStream;
+    await video.play();
+    video.classList.remove("hidden");
+    result.textContent = "Camera ready. Hold a customer QR code inside the frame.";
+    scanMerchantVideo(video, result);
+    toast("Merchant scanner ready");
+  }catch(error){
+    result.textContent = "Camera access was denied. Use manual entry to credit points.";
+    toast("Camera permission is required");
+  }
+}
+
+function scanMerchantVideo(video, result){
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d", { willReadFrequently:true });
+
+  merchantScanAnimation = requestAnimationFrame(function scanFrame(){
+    if(!merchantScanStream || video.readyState < 2){
+      merchantScanAnimation = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const image = context.getImageData(0, 0, canvas.width, canvas.height);
+    const code = typeof jsQR === "function" ? jsQR(image.data, image.width, image.height) : null;
+
+    if(code){
+      const now = Date.now();
+
+      if(code.data === lastMerchantCode && now - lastMerchantCodeTime < 10000){
+        merchantScanAnimation = requestAnimationFrame(scanFrame);
+        return;
+      }
+
+      lastMerchantCode = code.data;
+      lastMerchantCodeTime = now;
+      result.textContent = `Validated customer code: ${code.data}`;
+      toast("Customer QR validated");
+      analytics.trackEvent("merchant_qr_validated", { value:code.data });
+      stopMerchantScanner();
+      return;
+    }
+
+    merchantScanAnimation = requestAnimationFrame(scanFrame);
+  });
+}
+
+function stopMerchantScanner(){
+  if(merchantScanAnimation){
+    cancelAnimationFrame(merchantScanAnimation);
+    merchantScanAnimation = null;
+  }
+  if(merchantScanStream){
+    merchantScanStream.getTracks().forEach(track=>track.stop());
+    merchantScanStream = null;
+  }
+  const video = document.getElementById("merchantScannerVideo");
+  if(video){
+    video.pause();
+    video.srcObject = null;
+    video.classList.add("hidden");
+  }
+}
+
+function adjustMerchantPoints(){
+  const customer = document.getElementById("merchantCustomerLookup").value.trim();
+  const amount = Number(document.getElementById("merchantPointAmount").value);
+  const result = document.getElementById("merchantScanResult");
+
+  if(!customer || !Number.isFinite(amount) || amount < 1){
+    toast("Enter a customer and valid points");
+    return;
+  }
+
+  result.textContent = `${amount} points credited to ${customer}. Transaction logged.`;
+  analytics.trackEvent("merchant_manual_adjustment", { customer, amount });
+  toast("Points credited successfully");
+}
+
+function saveMerchantScheme(){
+  const points = document.getElementById("pointsPerCurrency").value;
+  const visits = document.getElementById("milestoneVisits").value;
+  toast(`Scheme saved: ${points} point per AED, ${visits}-visit milestone`);
+  analytics.trackEvent("merchant_scheme_updated", { points, visits });
+}
+
+function publishMerchantPromotion(){
+  const title = document.getElementById("promotionTitle").value.trim();
+  const windowLabel = document.getElementById("promotionWindow").value.trim();
+  const status = document.getElementById("promotionStatus");
+
+  if(!title || !windowLabel){
+    toast("Add a title and campaign window");
+    return;
+  }
+
+  status.textContent = `${title} is live for ${windowLabel}.`;
+  toast("Flash deal published");
+  analytics.trackEvent("merchant_promotion_published", { title, windowLabel });
+}
+
+function filterMerchantSegment(segment, button){
+  document.querySelectorAll(".segment-tab").forEach(tab=>tab.classList.remove("active"));
+  button.classList.add("active");
+  document.querySelectorAll("#merchantCustomerList .customer-row").forEach(row=>{
+    row.classList.toggle("hidden", segment !== "all" && row.dataset.segment !== segment);
+  });
+}
+
+function filterMerchantCustomers(){
+  const query = document.getElementById("merchantCustomerSearch").value.toLowerCase().trim();
+  document.querySelectorAll("#merchantCustomerList .customer-row").forEach(row=>{
+    row.classList.toggle("hidden", query && !row.textContent.toLowerCase().includes(query));
+  });
+}
+
+function sendMerchantNotification(){
+  const title = document.getElementById("merchantNotificationTitle").value.trim();
+  const message = document.getElementById("merchantNotificationMessage").value.trim();
+  const audience = document.getElementById("merchantNotificationAudience").value;
+
+  if(!title || !message){
+    toast("Add a notification title and message");
+    return;
+  }
+
+  notify(title, message);
+  toast(`Notification sent to ${audience.toLowerCase()}`);
+  analytics.trackEvent("merchant_notification_sent", { title, audience });
+}
+
+function downloadMerchantAsset(asset){
+  toast(`${asset} prepared for download`);
+  analytics.trackEvent("merchant_asset_requested", { asset });
+}
+
+function updateMerchantSecurity(setting){
+  toast(`${setting} update flow opened`);
+  analytics.trackEvent("merchant_security_update_started", { setting });
 }
 
 
@@ -799,10 +1002,10 @@ function earnDemo(){
 
   notify(
     "Points earned",
-    "+100 Aurelia points added"
+    "+100 Crane Points added"
   );
 
-  toast("+100 Aurelia points added");
+  toast("+100 Crane Points added");
 }
 
 
@@ -822,7 +1025,7 @@ const rewards = [
     id:"voucher",
     icon:"◆",
     name:"AED 50 Voucher",
-    description:"Redeemable at selected Aurelia partners.",
+    description:"Redeemable at selected Crane Points partners.",
     cost:2000
   },
   {
@@ -1328,7 +1531,7 @@ function handleQRCode(value){
       Demo behavior shows an error.
     */
 
-    toast("Not an Aurelia QR code");
+    toast("Not a Crane Points QR code");
 
     return;
   }
@@ -1587,7 +1790,7 @@ async function copyReferral(){
 async function shareReferral(){
 
   const text =
-    "Join me on Aurelia and earn premium loyalty rewards!";
+    "Join me on Crane Points and earn premium loyalty rewards!";
 
   const url =
     getReferralLink();
@@ -1596,7 +1799,7 @@ async function shareReferral(){
 
     try{
       await navigator.share({
-        title:"Join Aurelia",
+        title:"Join Crane Points",
         text,
         url
       });
@@ -2026,8 +2229,8 @@ function closeActionConfirm(){
 function createManifest(){
 
   const manifest = {
-    name:"Aurelia Loyalty",
-    short_name:"Aurelia",
+    name:"Crane Points Loyalty",
+    short_name:"Crane Points",
     description:"Premium loyalty and rewards",
     start_url:"./",
     scope:"./",
@@ -2123,7 +2326,7 @@ async function installPWA(){
     result.outcome === "accepted"
   ){
 
-    toast("Aurelia installed");
+    toast("Crane Points installed");
 
   }
 
@@ -2168,7 +2371,7 @@ function registerServiceWorker(){
       .register("./sw.js")
       .then(()=>{
         console.log(
-          "Aurelia service worker registered"
+          "Crane Points service worker registered"
         );
       })
       .catch(error=>{
@@ -2444,7 +2647,7 @@ function initialize(){
 
   registerServiceWorker();
 
-  setTimeout(hideSplashScreen, 1800);
+  setTimeout(hideSplashScreen, 6000);
 }
 
 initialize();
