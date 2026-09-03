@@ -36,6 +36,17 @@
 <header class="header">
   <div class="header-row">
 
+    <button
+      class="icon-button admin-only hidden"
+      id="adminMenuToggle"
+      type="button"
+      aria-label="Open admin navigation"
+      aria-controls="adminNavigation"
+      aria-expanded="false"
+      onclick="toggleAdminNav()">
+      ☰
+    </button>
+
     <div class="brand">
       <div class="logo">A</div>
       <div>
@@ -1185,7 +1196,7 @@
 
 <!-- NAV -->
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" id="adminNavigation">
 
   <button class="nav active customer-nav" data-view="home" onclick="showView('home')">
     <span class="nav-icon">⌂</span>

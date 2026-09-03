@@ -234,7 +234,33 @@ function showAdminSection(sectionId, button){
     .forEach(nav=>nav.classList.remove("active"));
   button.classList.add("active");
 
+  setAdminNav(false);
+
   window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+function setAdminNav(isOpen){
+  const app = document.querySelector(".app");
+  const toggle = document.getElementById("adminMenuToggle");
+
+  if(!app || !toggle){
+    return;
+  }
+
+  app.classList.toggle("admin-nav-open", isOpen);
+  toggle.setAttribute("aria-expanded", String(isOpen));
+  toggle.setAttribute(
+    "aria-label",
+    isOpen ? "Close admin navigation" : "Open admin navigation"
+  );
+}
+
+function toggleAdminNav(){
+  const app = document.querySelector(".app");
+
+  if(app){
+    setAdminNav(!app.classList.contains("admin-nav-open"));
+  }
 }
 
 function hideAuthScreen(){
@@ -379,6 +405,9 @@ function confirmLogout(){
 
   document.querySelectorAll(".customer-only")
     .forEach(element=>element.classList.add("hidden"));
+  document.querySelectorAll(".admin-only")
+    .forEach(element=>element.classList.add("hidden"));
+  setAdminNav(false);
 
   if(document.getElementById("authForm")){
     document.getElementById("authForm").reset();
@@ -475,10 +504,18 @@ function switchRole(role){
   localStorage.setItem("aurelia_role",role);
   updateRoleContext();
 
+  const app = document.querySelector(".app");
+  if(app){
+    app.classList.toggle("admin-mode", role === "admin");
+  }
+  setAdminNav(false);
+
   document.querySelectorAll(".customer-nav,.merchant-nav,.admin-nav")
     .forEach(nav=>nav.classList.add("hidden"));
   document.querySelectorAll(".customer-only")
     .forEach(element=>element.classList.toggle("hidden",role !== "customer"));
+  document.querySelectorAll(".admin-only")
+    .forEach(element=>element.classList.toggle("hidden",role !== "admin"));
 
   if(role === "customer"){
     if(!customerAuthenticated){
